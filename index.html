@@ -188,24 +188,15 @@
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "react": "https://aistudiocdn.com/react@^19.2.0",
-    "@google/genai": "https://esm.sh/@google/genai"
+    "@google/genai": "https://esm.sh/@google/genai",
+    "dotenv": "https://aistudiocdn.com/dotenv@^17.2.3",
+    "express": "https://aistudiocdn.com/express@^5.1.0",
+    "path": "https://aistudiocdn.com/path@^0.12.7",
+    "url": "https://aistudiocdn.com/url@^0.11.4"
   }
 }
 </script>
 <script>
-  // Polyfill Node.js globals for browser compatibility. The @google/genai library,
-  // being a universal module, expects some of these to exist. This script runs
-  // before any other module to ensure the global environment is prepared.
-  if (typeof window.global === 'undefined') {
-    window.global = window;
-  }
-  if (typeof window.process === 'undefined') {
-    window.process = {};
-  }
-  if (typeof window.process.env === 'undefined') {
-    window.process.env = {};
-  }
-
   // Set theme on initial load to prevent FOUC
   if (localStorage.theme === 'light' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: light)').matches)) {
     document.documentElement.classList.remove('dark');

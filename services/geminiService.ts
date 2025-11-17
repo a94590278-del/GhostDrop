@@ -1,64 +1,33 @@
-// The client is now created on-demand to prevent module-level side effects
-// and to handle configuration issues more gracefully.
-async function getClient() {
-  // Lazily import the library to prevent module-load-time errors.
-  const { GoogleGenAI } = await import('@google/genai');
-
-  // Safely access the API key. The polyfill in index.html ensures `process.env` exists.
-  const apiKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : undefined;
-
-  if (!apiKey) {
-    console.warn("Gemini API key not set. Summarization will be disabled.");
-    return null;
-  }
-  try {
-    // Create a new instance for each request to ensure no stale configuration.
-    return new GoogleGenAI({ apiKey: apiKey });
-  } catch (error) {
-    console.error("Failed to initialize the Gemini client:", error);
-    return null;
-  }
-}
-
 export async function summarizeEmail(emailText: string): Promise<string> {
-  const client = await getClient();
-  if (!client) {
-    return "Error: AI summarization is not configured. The API key may be missing or invalid.";
-  }
-
   if (!emailText || emailText.trim().length === 0) {
     return "The email body is empty, nothing to summarize.";
   }
   
   try {
-    const model = 'gemini-2.5-flash';
-    
-    const prompt = `You are a helpful assistant integrated into an email client. Your task is to summarize the content of an email concisely. Provide a brief summary in a few bullet points. If there are any critical pieces of information like verification codes, promotional offers, or direct calls to action, highlight them.
-
-Here is the email content:
----
-${emailText}
----
-
-Provide your summary below:`;
-
-    const response = await client.models.generateContent({
-      model: model,
-      contents: prompt,
+    const response = await fetch('/api/gemini/summarize', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ emailText }),
     });
 
-    if (!response) {
-      throw new Error("Received an empty response from the Gemini API.");
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Request failed with status ${response.status}`);
     }
 
-    return response.text;
+    const data = await response.json();
+    return data.summary;
+
   } catch (error) {
-    console.error("Error summarizing email with Gemini:", error);
+    console.error("Error summarizing email via backend:", error);
     if (error instanceof Error) {
         if (error.message.includes('API key not valid')) {
-            return 'Error: The provided API key is not valid. Please check your configuration.';
+            return 'Error: The API key configured on the server is not valid.';
         }
+        return `Error: ${error.message}`;
     }
-    return "Sorry, there was a problem communicating with the AI. Please try again later.";
+    return "Sorry, there was a problem communicating with the AI service. Please try again later.";
   }
 }
