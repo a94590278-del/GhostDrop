@@ -21,8 +21,6 @@ if (!apiKey) {
 }
 const genAI = new GoogleGenAI({ apiKey });
 
-const chatSessions = new Map(); // In-memory session store
-
 const systemInstruction = `You are "Ghosty", a friendly and helpful AI support assistant for GhostDrop, a disposable temporary email service. Your goal is to answer user questions about the service based on the information provided below. Be concise, friendly, and clear in your responses. Do not make up features that are not listed.
 
 Here is the information about GhostDrop:
@@ -86,30 +84,38 @@ Provide your summary below:`;
 
 // Route for chatbot
 app.post('/api/gemini/chat', async (req, res) => {
-    let { message, sessionId } = req.body;
+    const { message, history } = req.body;
 
     if (!message) {
         return res.status(400).json({ error: 'message is required' });
     }
 
     try {
-        let chat;
-        if (sessionId && chatSessions.has(sessionId)) {
-            chat = chatSessions.get(sessionId);
-        } else {
-            chat = genAI.chats.create({
-                model: 'gemini-2.5-flash',
-                config: {
-                    systemInstruction: systemInstruction,
-                },
-            });
-            sessionId = `session-${Date.now()}-${Math.random()}`; // Create a new session ID
-            chatSessions.set(sessionId, chat);
-        }
+        const model = 'gemini-2.5-flash';
         
-        const response = await chat.sendMessage({ message });
+        // Create a new chat session with the history from the client
+        const chat = genAI.chats.create({
+            model: model,
+            history: history || [],
+            config: {
+                systemInstruction: systemInstruction,
+            },
+        });
 
-        res.json({ response: response.text, sessionId });
+        const result = await chat.sendMessage({ message: message });
+        const responseText = result.text;
+        
+        // Manually construct the new history to send back to the client
+        const newHistory = [
+            ...(history || []),
+            { role: 'user', parts: [{ text: message }] },
+            { role: 'model', parts: [{ text: responseText }] }
+        ];
+
+        res.json({ 
+            response: responseText, 
+            history: newHistory
+        });
 
     } catch (error) {
         console.error('Gemini Chat Error:', error);

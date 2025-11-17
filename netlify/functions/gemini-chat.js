@@ -52,22 +52,33 @@ export const handler = async (event) => {
             return { statusCode: 400, body: JSON.stringify({ error: 'message is required' }) };
         }
 
+        const model = 'gemini-2.5-flash';
+
+        // Create a new chat session with the history from the client
         const chat = genAI.chats.create({
-            model: 'gemini-2.5-flash',
-            history: history || [], // Start with the history from the client
+            model: model,
+            history: history || [],
             config: {
                 systemInstruction: systemInstruction,
             },
         });
+
+        const result = await chat.sendMessage({ message: message });
+        const responseText = result.text;
         
-        const response = await chat.sendMessage({ message });
+        // Manually construct the new history to send back to the client
+        const newHistory = [
+            ...(history || []),
+            { role: 'user', parts: [{ text: message }] },
+            { role: 'model', parts: [{ text: responseText }] }
+        ];
 
         return {
             statusCode: 200,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                response: response.text, 
-                history: chat.history // Send the updated history back
+                response: responseText, 
+                history: newHistory
             }),
         };
     } catch (error) {

@@ -5,14 +5,13 @@
   "main": "index.html",
   "type": "module",
   "scripts": {
-    "dev": "netlify dev"
+    "start": "node backend/server.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google/genai": "^0.15.0"
-  },
-  "devDependencies": {
-    "netlify-cli": "^17.23.2"
+    "@google/genai": "^0.15.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
   }
 }
