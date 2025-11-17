@@ -17,7 +17,7 @@ const PREFETCH_RETRY_DELAY = 30000; // 30 seconds
 const randomString = (length: number = 10) => {
   let result = '';
   const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < characters.length; i++) {
+  for (let i = 0; i < length; i++) {
     result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
   return result;
@@ -104,7 +104,7 @@ async function createNewMailbox(address?: string): Promise<{ address: string; to
     } else {
         const domains = await getDomains();
         const domain = domains[Math.floor(Math.random() * domains.length)];
-        finalAddress = `${randomString(12)}@${domain}`;
+        finalAddress = `${randomString(8)}@${domain}`;
     }
     
     const password = randomString(12);

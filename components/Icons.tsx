@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 const Icon: React.FC<{ children: React.ReactNode, className?: string }> = ({ children, className }) => (
@@ -70,6 +71,12 @@ export const PaperClipIcon = () => (
 export const DownloadIcon = () => (
   <Icon>
     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+  </Icon>
+);
+
+export const ReplyIcon = () => (
+  <Icon>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
   </Icon>
 );
 

@@ -3,13 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import type { MessageDetails } from '../types';
 import { getAttachmentBlob } from '../services/mailService';
-import { PaperClipIcon, DownloadIcon, SparklesIcon } from './Icons';
+import { PaperClipIcon, DownloadIcon, SparklesIcon, ReplyIcon } from './Icons';
 import Spinner from './Spinner';
 
 interface MessageViewProps {
   message: MessageDetails | null;
   onSummarizeEmail: (text: string) => Promise<string>;
   isDestructing: boolean;
+  onReply: () => void;
 }
 
 const MessageViewSkeleton = () => (
@@ -29,7 +30,7 @@ const MessageViewSkeleton = () => (
   </div>
 );
 
-export default function MessageView({ message, onSummarizeEmail, isDestructing }: MessageViewProps) {
+export default function MessageView({ message, onSummarizeEmail, isDestructing, onReply }: MessageViewProps) {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState<boolean>(false);
@@ -106,17 +107,27 @@ export default function MessageView({ message, onSummarizeEmail, isDestructing }
       ) : (
         <div className="flex flex-col h-full min-h-0">
           <div className="border-b border-gray-200 dark:border-cyan-500/20 pb-4 mb-4">
-            <div className="flex justify-between items-start gap-4">
+            <div className="flex justify-between items-start gap-2">
               <h3 className="text-xl font-bold text-gray-900 dark:text-gray-200 flex-grow">{message.subject}</h3>
-              <button 
-                onClick={handleSummarize}
-                disabled={isSummarizing}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait bg-white/70 text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700 dark:hover:border-cyan-500"
-                title="Summarize with Gemini AI"
-              >
-                {isSummarizing ? <Spinner /> : <SparklesIcon />}
-                <span>Summarize</span>
-              </button>
+              <div className="flex-shrink-0 flex items-center gap-2">
+                <button 
+                  onClick={onReply}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors bg-white/70 text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700 dark:hover:border-cyan-500"
+                  title="Reply to email"
+                >
+                  <ReplyIcon />
+                  <span>Reply</span>
+                </button>
+                <button 
+                  onClick={handleSummarize}
+                  disabled={isSummarizing}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait bg-white/70 text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700 dark:hover:border-cyan-500"
+                  title="Summarize with Gemini AI"
+                >
+                  {isSummarizing ? <Spinner /> : <SparklesIcon />}
+                  <span>Summarize</span>
+                </button>
+              </div>
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400 mt-2 space-y-1">
               <p><span className="font-semibold text-gray-700 dark:text-gray-300 w-14 inline-block">From:</span> {message.from}</p>

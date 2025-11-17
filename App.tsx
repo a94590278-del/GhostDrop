@@ -8,6 +8,7 @@ import EmailDisplay from './components/EmailDisplay';
 import Actions from './components/Actions';
 import Inbox from './components/Inbox';
 import MessageView from './components/MessageView';
+import ComposeView from './components/ComposeView';
 import Spinner from './components/Spinner';
 import InfoSection from './components/InfoSection';
 import Footer from './components/Footer';
@@ -41,6 +42,7 @@ export default function App() {
   const [isCustomMode, setIsCustomMode] = useState<boolean>(false);
   const [isDestructing, setIsDestructing] = useState<boolean>(false);
   const [newlyArrivedMessageIds, setNewlyArrivedMessageIds] = useState<Set<string>>(new Set());
+  const [composeData, setComposeData] = useState<{ to: string; subject: string; } | null>(null);
   
   const isInitialMount = useRef(true);
   const knownMessageIds = useRef(new Set<string>());
@@ -275,6 +277,27 @@ export default function App() {
     handleFetchMessages();
   };
 
+  const handleReply = () => {
+    if (selectedMessage) {
+      setComposeData({
+        to: selectedMessage.from,
+        subject: `Re: ${selectedMessage.subject}`,
+      });
+    }
+  };
+
+  const handleCloseCompose = () => {
+    setComposeData(null);
+  };
+  
+  const handleSendMessage = async (data: { to: string; subject: string; body: string }) => {
+    // The current backend (mail.gw) does not support sending emails.
+    // This function shows an alert to inform the user.
+    console.log("Attempting to send email:", data);
+    alert("Sending functionality is not supported by this temporary mail service. This is a UI demonstration.");
+    handleCloseCompose();
+  };
+
   const filteredMessages = messages.filter(message =>
     message.from.toLowerCase().includes(searchTerm.toLowerCase()) ||
     message.subject.toLowerCase().includes(searchTerm.toLowerCase())
@@ -332,10 +355,20 @@ export default function App() {
               message={selectedMessage} 
               isDestructing={isDestructing}
               onSummarizeEmail={handleSummarizeEmail}
+              onReply={handleReply}
             />
           </div>
         </main>
         
+        {composeData && (
+          <ComposeView 
+            initialTo={composeData.to}
+            initialSubject={composeData.subject}
+            onSend={handleSendMessage}
+            onClose={handleCloseCompose}
+          />
+        )}
+
         <InfoSection />
         <Footer />
       </div>
