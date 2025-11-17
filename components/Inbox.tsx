@@ -4,15 +4,34 @@ import { SearchIcon, EnvelopeIcon, EnvelopeOpenIcon } from './Icons';
 
 interface InboxProps {
   messages: Message[];
+  isLoading: boolean;
   onSelectMessage: (id: string) => void;
   selectedMessageId: string | null;
   searchTerm: string;
   onSearchChange: (term: string) => void;
   readStatus: Record<string, boolean>;
   onToggleReadStatus: (id: string) => void;
+  isDestructing: boolean;
+  newlyArrivedMessageIds: Set<string>;
 }
 
-export default function Inbox({ messages, onSelectMessage, selectedMessageId, searchTerm, onSearchChange, readStatus, onToggleReadStatus }: InboxProps) {
+const InboxSkeleton = () => (
+  <ul className="space-y-2 overflow-y-auto -mr-2 pr-2">
+    {[...Array(3)].map((_, i) => (
+      <li key={i} className="flex items-start p-3 rounded-md transition-all duration-200 border border-transparent group relative animate-pulse">
+        <div className="flex-grow ml-5">
+          <div className="flex justify-between items-start">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/5"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/5"></div>
+          </div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/5 mt-2"></div>
+        </div>
+      </li>
+    ))}
+  </ul>
+);
+
+export default function Inbox({ messages, isLoading, onSelectMessage, selectedMessageId, searchTerm, onSearchChange, readStatus, onToggleReadStatus, isDestructing, newlyArrivedMessageIds }: InboxProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -33,7 +52,7 @@ export default function Inbox({ messages, onSelectMessage, selectedMessageId, se
   }
 
   return (
-    <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-md border border-gray-200 dark:border-cyan-500/20 rounded-lg p-4 flex-grow flex flex-col min-h-[200px] shadow-lg dark:shadow-cyan-500/5 transition-colors">
+    <div className={`bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-cyan-500/20 rounded-lg p-4 flex-grow flex flex-col min-h-[200px] shadow-lg dark:shadow-cyan-500/5 transition-all duration-500 ${isDestructing ? 'animate-destruct' : ''}`}>
       <h2 className="text-lg font-bold text-blue-600 dark:text-cyan-400 mb-3 border-b border-gray-200 dark:border-cyan-500/20 pb-2">Inbox</h2>
       
       <div className="relative mb-4">
@@ -50,7 +69,9 @@ export default function Inbox({ messages, onSelectMessage, selectedMessageId, se
         />
       </div>
 
-      {messages.length === 0 ? (
+      {isLoading ? (
+        <InboxSkeleton />
+      ) : messages.length === 0 ? (
         <div className="flex-grow flex items-center justify-center">
           {searchTerm ? (
             <p className="text-gray-500 dark:text-gray-500">No messages found for "{searchTerm}"</p>
@@ -63,6 +84,7 @@ export default function Inbox({ messages, onSelectMessage, selectedMessageId, se
           {messages.map((message) => {
             const isRead = readStatus[message.id];
             const isSelected = selectedMessageId === message.id;
+            const isNew = newlyArrivedMessageIds.has(message.id);
 
             return (
               <li
@@ -74,7 +96,7 @@ export default function Inbox({ messages, onSelectMessage, selectedMessageId, se
                     : isRead 
                     ? 'hover:bg-gray-100 dark:hover:bg-gray-800/70'
                     : 'bg-blue-50/50 dark:bg-cyan-900/10 hover:bg-blue-100/70 dark:hover:bg-cyan-900/20'
-                }`}
+                } ${isNew ? 'animate-new-email' : ''}`}
               >
                 {!isRead && <span className="flex-shrink-0 w-2 h-2 bg-blue-500 dark:bg-cyan-400 rounded-full mt-2 mr-3"></span>}
                 

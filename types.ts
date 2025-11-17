@@ -6,6 +6,7 @@ export interface Message {
 }
 
 export interface Attachment {
+  id:string;
   filename: string;
   contentType: string;
   size: number;
@@ -16,4 +17,13 @@ export interface MessageDetails extends Message {
   body: string;
   textBody: string;
   htmlBody: string;
+}
+
+// FIX: Add missing LinkPreview interface.
+export interface LinkPreview {
+  url: string;
+  title: string;
+  description: string;
+  image?: string;
+  sitename: string;
 }

@@ -10,43 +10,56 @@ let cachedDomains: string[] | null = null;
 // State for pre-fetching to improve performance
 let prefetchedMailbox: { address: string; token: string } | null = null;
 let isPrefetching = false;
+let lastPrefetchFailedTimestamp: number | null = null;
+const PREFETCH_RETRY_DELAY = 30000; // 30 seconds
 
 // Helper to generate a random string for passwords
 const randomString = (length: number = 10) => {
   let result = '';
   const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < length; i++) {
+  for (let i = 0; i < characters.length; i++) {
     result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
   return result;
 };
 
 // Internal fetch wrapper for API calls
-async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+async function apiRequest<T>(endpoint: string, options: RequestInit & { responseType?: 'blob' } = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
+  const { responseType, ...fetchOptions } = options;
   
-  const isHydraEndpoint = !['/token', '/accounts'].includes(endpoint);
+  const isHydraEndpoint = !['/token', '/accounts'].includes(endpoint) && !endpoint.includes('/attachments/');
   if (isHydraEndpoint) {
     headers.append('Accept', 'application/ld+json');
-  } else {
+  } else if (!endpoint.includes('/attachments/')) {
     headers.append('Accept', 'application/json');
   }
   
-  headers.append('Content-Type', 'application/json');
+  if (!endpoint.includes('/attachments/')) {
+    headers.append('Content-Type', 'application/json');
+  }
 
   if (authToken && !['/token', '/accounts'].includes(endpoint)) {
     headers.append('Authorization', `Bearer ${authToken}`);
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
+    ...fetchOptions,
     headers,
   });
 
   if (!response.ok) {
+    if (response.status === 400 && endpoint === '/accounts') {
+        // Mail.gw returns 400 if the address is already used.
+        throw new Error('Address is already taken. Please try another.');
+    }
     const errorBody = await response.text();
     console.error(`API request failed with status ${response.status}:`, errorBody);
     throw new Error(`Request failed: ${response.statusText} (${response.status})`);
+  }
+
+  if (responseType === 'blob') {
+    return response.blob() as Promise<T>;
   }
   
   const contentType = response.headers.get('content-type');
@@ -54,44 +67,66 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
       return null as T;
   }
 
-  return response.json();
+  const text = await response.text();
+  if (!text) {
+    return null as T; // Handle empty body even if headers say JSON
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.error(`Failed to parse JSON response from ${endpoint}:`, error);
+    throw new Error('Received invalid data from the server.');
+  }
 }
 
-/** The core logic to create a new mailbox. */
-async function createNewMailbox(): Promise<{ address: string; token: string }> {
-    // 1. Get available domains (cached)
-    if (!cachedDomains || cachedDomains.length === 0) {
-      const domainsResponse = await apiRequest<{ 'hydra:member'?: { domain: string }[] }>('/domains');
-      const domains = domainsResponse?.['hydra:member']?.map(d => d.domain);
-      
-      if (!domains || domains.length === 0) {
-        throw new Error('Could not fetch available domains.');
-      }
-      cachedDomains = domains;
+/** Fetches and caches available domains */
+export async function getDomains(): Promise<string[]> {
+    if (cachedDomains && cachedDomains.length > 0) {
+      return cachedDomains;
+    }
+    const domainsResponse = await apiRequest<{ 'hydra:member'?: { domain: string }[] }>('/domains');
+    const domains = domainsResponse?.['hydra:member']?.map(d => d.domain);
+    
+    if (!domains || domains.length === 0) {
+      throw new Error('Could not fetch available domains.');
+    }
+    cachedDomains = domains;
+    return cachedDomains;
+}
+
+/** The core logic to create a new mailbox. Can be random or specific. */
+async function createNewMailbox(address?: string): Promise<{ address: string; token: string }> {
+    let finalAddress: string;
+
+    if (address) {
+        finalAddress = address;
+    } else {
+        const domains = await getDomains();
+        const domain = domains[Math.floor(Math.random() * domains.length)];
+        finalAddress = `${randomString(12)}@${domain}`;
     }
     
-    const domain = cachedDomains[Math.floor(Math.random() * cachedDomains.length)];
-    const address = `${randomString(12)}@${domain}`;
     const password = randomString(12);
 
     // 2. Create account
     await apiRequest('/accounts', {
       method: 'POST',
-      body: JSON.stringify({ address, password }),
+      body: JSON.stringify({ address: finalAddress, password }),
     });
 
     // 3. Get token
     const tokenResponse = await apiRequest<{ token: string }>('/token', {
       method: 'POST',
-      body: JSON.stringify({ address, password }),
+      body: JSON.stringify({ address: finalAddress, password }),
     });
     
-    const token = tokenResponse.token;
+    const token = tokenResponse?.token;
     if (!token) {
         throw new Error('Failed to retrieve authentication token.');
     }
     
-    return { address, token };
+    return { address: finalAddress, token };
 }
 
 /** Pre-fetches the next mailbox in the background. */
@@ -99,12 +134,19 @@ async function prefetchMailbox() {
     if (prefetchedMailbox || isPrefetching) {
         return; // A mailbox is already ready or being fetched.
     }
+    // If a prefetch failed recently, wait before retrying.
+    if (lastPrefetchFailedTimestamp && (Date.now() - lastPrefetchFailedTimestamp < PREFETCH_RETRY_DELAY)) {
+        return;
+    }
+
     isPrefetching = true;
     try {
         prefetchedMailbox = await createNewMailbox();
+        lastPrefetchFailedTimestamp = null; // Reset on success
     } catch (e) {
         console.error("Background mailbox prefetch failed:", e);
         prefetchedMailbox = null; // Reset to allow retrying.
+        lastPrefetchFailedTimestamp = Date.now(); // Record failure time
     } finally {
         isPrefetching = false;
     }
@@ -132,6 +174,15 @@ export async function generateRandomMailbox(): Promise<string> {
     return mailbox.address;
 }
 
+/** Generate a custom temporary mailbox. */
+export async function generateCustomMailbox(address: string): Promise<string> {
+    const mailbox = await createNewMailbox(address);
+    authToken = mailbox.token;
+    prefetchMailbox();
+    return mailbox.address;
+}
+
+
 /** Fetch message headers for the current account */
 export async function fetchMessages(): Promise<Message[]> {
   if (!authToken) throw new Error('Not authenticated.');
@@ -139,7 +190,7 @@ export async function fetchMessages(): Promise<Message[]> {
   const response = await apiRequest<{ 'hydra:member': any[] }>('/messages');
   
   // Map API response to our internal Message type
-  return (response['hydra:member'] || []).map(msg => ({
+  return (response?.['hydra:member'] || []).map(msg => ({
     id: msg.id,
     from: msg.from?.address || 'Unknown Sender',
     subject: msg.subject || '(no subject)',
@@ -152,6 +203,10 @@ export async function fetchMessage(id: string): Promise<MessageDetails> {
   if (!authToken) throw new Error('Not authenticated.');
   
   const msg = await apiRequest<any>(`/messages/${id}`);
+
+  if (!msg) {
+    throw new Error(`Message with ID ${id} not found or could not be loaded.`);
+  }
   
   // Map API response to our internal MessageDetails type
   return {
@@ -160,6 +215,7 @@ export async function fetchMessage(id: string): Promise<MessageDetails> {
     subject: msg.subject || '(no subject)',
     date: msg.createdAt,
     attachments: (msg.attachments || []).map((att: any) => ({
+      id: att.id,
       filename: att.filename,
       contentType: att.contentType,
       size: att.size,
@@ -168,4 +224,14 @@ export async function fetchMessage(id: string): Promise<MessageDetails> {
     textBody: msg.text || '',
     htmlBody: msg.html?.[0] || '',
   };
+}
+
+
+/** Fetches an attachment as a blob */
+export async function getAttachmentBlob(messageId: string, attachmentId: string): Promise<Blob> {
+    if (!authToken) throw new Error('Not authenticated.');
+    const blob = await apiRequest<Blob>(`/messages/${messageId}/attachments/${attachmentId}`, {
+        responseType: 'blob',
+    });
+    return blob;
 }
