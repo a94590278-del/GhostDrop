@@ -93,18 +93,27 @@ app.post('/api/gemini/chat', async (req, res) => {
     try {
         const model = 'gemini-2.5-flash';
         
-        const chat = genAI.chats.create({
+        // Construct the full conversation history for generateContent
+        const contents = [
+            ...(history || []),
+            { role: 'user', parts: [{ text: message }] },
+        ];
+
+        const response = await genAI.models.generateContent({
             model: model,
-            history: history || [],
+            contents: contents,
             config: {
                 systemInstruction: systemInstruction,
             },
         });
-
-        const result = await chat.sendMessage(message);
-        const responseText = result.text;
         
-        const updatedHistory = await chat.getHistory();
+        const responseText = response.text;
+        
+        // The new history is the old history plus the latest user message and model response
+        const updatedHistory = [
+            ...contents,
+            { role: 'model', parts: [{ text: responseText }] }
+        ];
 
         res.json({
             response: responseText,
