@@ -93,7 +93,6 @@ app.post('/api/gemini/chat', async (req, res) => {
     try {
         const model = 'gemini-2.5-flash';
         
-        // Create a new chat session with the history from the client
         const chat = genAI.chats.create({
             model: model,
             history: history || [],
@@ -102,19 +101,14 @@ app.post('/api/gemini/chat', async (req, res) => {
             },
         });
 
-        const result = await chat.sendMessage({ message: message });
+        const result = await chat.sendMessage(message);
         const responseText = result.text;
         
-        // Manually construct the new history to send back to the client
-        const newHistory = [
-            ...(history || []),
-            { role: 'user', parts: [{ text: message }] },
-            { role: 'model', parts: [{ text: responseText }] }
-        ];
+        const updatedHistory = await chat.getHistory();
 
-        res.json({ 
-            response: responseText, 
-            history: newHistory
+        res.json({
+            response: responseText,
+            history: updatedHistory
         });
 
     } catch (error) {
