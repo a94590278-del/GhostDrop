@@ -1,12 +1,13 @@
-let sessionId: string | null = null;
-
-export function resetChatSession() {
-    sessionId = null;
+// A minimal representation of the Gemini API's Content type for client-side state management.
+export interface ChatHistoryContent {
+  role: 'user' | 'model';
+  parts: { text: string }[];
 }
 
-export async function getChatbotResponse(message: string): Promise<string> {
+
+export async function getChatbotResponse(message: string, history: ChatHistoryContent[]): Promise<{ responseText: string, newHistory: ChatHistoryContent[] }> {
     if (!message || message.trim().length === 0) {
-        return "Please ask a question.";
+        return { responseText: "Please ask a question.", newHistory: history };
     }
 
     try {
@@ -17,7 +18,7 @@ export async function getChatbotResponse(message: string): Promise<string> {
             },
             body: JSON.stringify({ 
                 message,
-                sessionId, // Send current session ID, can be null
+                history, 
             }),
         });
 
@@ -27,14 +28,15 @@ export async function getChatbotResponse(message: string): Promise<string> {
         }
         
         const data = await response.json();
-        sessionId = data.sessionId; // Store the new/updated session ID from the backend
-        return data.response;
+        return { responseText: data.response, newHistory: data.history };
 
     } catch (error) {
         console.error("Error sending message to backend chat service:", error);
-        if (error instanceof Error && error.message.includes('API key')) {
-            return 'Error: The API key on the server is not configured correctly.';
-        }
-        return "Sorry, I'm having trouble connecting to the support AI right now. Please try again later.";
+        const errorMessage = (error instanceof Error && (error.message.includes('API key') || error.message.includes('Chatbot is not configured'))) 
+            ? 'Error: The AI assistant is not configured correctly on the server. The API key may be missing or invalid.'
+            : "Sorry, I'm having trouble connecting to the support AI right now. Please try again later.";
+        
+        // Return the error message as a response, and the original history
+        return { responseText: errorMessage, newHistory: history };
     }
 }

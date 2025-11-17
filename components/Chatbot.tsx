@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { XIcon, PaperAirplaneIcon, SparklesIcon, RefreshIcon } from './Icons';
-import { getChatbotResponse, resetChatSession } from '../services/chatbotService';
+import { getChatbotResponse } from '../services/chatbotService';
+import type { ChatHistoryContent } from '../services/chatbotService';
 
 interface Message {
   role: 'user' | 'model';
@@ -28,6 +29,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [animationClass, setAnimationClass] = useState('');
+  const [history, setHistory] = useState<ChatHistoryContent[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -50,16 +52,18 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
 
     const userMessage: Message = { role: 'user', text: input };
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
     setIsLoading(true);
 
     try {
-      const responseText = await getChatbotResponse(input);
+      const { responseText, newHistory } = await getChatbotResponse(currentInput, history);
       const modelMessage: Message = { role: 'model', text: responseText };
       setMessages(prev => [...prev, modelMessage]);
+      setHistory(newHistory);
     } catch (error) {
-      console.error("Chatbot error:", error);
-      const errorMessage: Message = { role: 'model', text: "Sorry, I'm having trouble connecting right now. Please try again." };
+      console.error("Chatbot component error:", error);
+      const errorMessage: Message = { role: 'model', text: "Sorry, a network error occurred. Please check your connection and try again." };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -67,8 +71,8 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
   };
   
   const handleNewChat = () => {
-    resetChatSession();
     setMessages([initialMessage]);
+    setHistory([]);
     setInput('');
     setIsLoading(false);
     inputRef.current?.focus();
