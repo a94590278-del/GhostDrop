@@ -1,14 +1,16 @@
 
+
 import React from 'react';
 
-const Icon: React.FC<{ children: React.ReactNode, className?: string }> = ({ children, className }) => (
+// FIX: Add `strokeWidth` to the props to allow overriding the default.
+const Icon: React.FC<{ children: React.ReactNode, className?: string, strokeWidth?: number }> = ({ children, className, strokeWidth = 2 }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     className={`h-5 w-5 ${className}`}
     fill="none"
     viewBox="0 0 24 24"
     stroke="currentColor"
-    strokeWidth={2}
+    strokeWidth={strokeWidth}
   >
     {children}
   </svg>
@@ -37,14 +39,15 @@ export const CheckIcon = () => (
     </Icon>
 );
 
-export const RefreshIcon = () => (
-  <Icon>
+export const RefreshIcon = ({ className }: { className?: string }) => (
+  <Icon className={className}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0l3.18-3.185m-11.665-2.25h.008v.008h-.008v-.008zm-4.993 0h.008v.008h-.008v-.008z" />
   </Icon>
 );
 
-export const SparklesIcon = () => (
-    <Icon>
+// FIX: Accept and pass down `className` prop to allow custom styling.
+export const SparklesIcon = ({ className }: { className?: string }) => (
+    <Icon className={className}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.562L16.5 21.75l-.398-1.188a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.188-.398a2.25 2.25 0 001.423-1.423L16.5 15.75l.398 1.188a2.25 2.25 0 001.423 1.423L19.5 18.75l-1.188.398a2.25 2.25 0 00-1.423 1.423z" />
     </Icon>
 )
@@ -118,8 +121,8 @@ export const ChevronDownIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export const XIcon = () => (
-    <Icon>
+export const XIcon = ({ className }: { className?: string }) => (
+    <Icon className={className}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </Icon>
 );
@@ -158,4 +161,18 @@ export const SpeakerXMarkIcon = () => (
   <Icon>
     <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0L21.75 14.25M19.5 12L21.75 9.75M19.5 12L17.25 14.25M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
   </Icon>
+);
+
+export const ChatBubbleOvalLeftEllipsisIcon = () => (
+    <Icon className="h-8 w-8" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 10.5c0 .985-.425 1.881-1.125 2.533L16.5 15l-1.5-1.5a3.375 3.375 0 00-2.533-1.125H9.375a3.375 3.375 0 01-3.375-3.375V6.375A3.375 3.375 0 019.375 3h5.25A3.375 3.375 0 0118 6.375v4.125zM4.5 10.5a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5zM3.75 12a.75.75 0 111.5 0 .75.75 0 01-1.5 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 6.75a.75.75 0 100-1.5.75.75 0 000 1.5z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 6.75a.75.75 0 100-1.5.75.75 0 000 1.5zM8.25 6.75a.75.75 0 100-1.5.75.75 0 000 1.5z" />
+    </Icon>
+);
+
+export const PaperAirplaneIcon = () => (
+    <Icon className="h-6 w-6 -rotate-45" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+    </Icon>
 );

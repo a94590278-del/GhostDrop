@@ -12,6 +12,8 @@ import ComposeView from './components/ComposeView';
 import Spinner from './components/Spinner';
 import InfoSection from './components/InfoSection';
 import Footer from './components/Footer';
+import Chatbot from './components/Chatbot';
+import { ChatBubbleOvalLeftEllipsisIcon } from './components/Icons';
 
 const POLLING_INTERVAL = 5000; // 5 seconds
 
@@ -43,6 +45,7 @@ export default function App() {
   const [isDestructing, setIsDestructing] = useState<boolean>(false);
   const [newlyArrivedMessageIds, setNewlyArrivedMessageIds] = useState<Set<string>>(new Set());
   const [composeData, setComposeData] = useState<{ to: string; subject: string; } | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   
   const isInitialMount = useRef(true);
   const knownMessageIds = useRef(new Set<string>());
@@ -372,6 +375,20 @@ export default function App() {
         <InfoSection />
         <Footer />
       </div>
+
+      {/* Chatbot components */}
+      <div className="fixed bottom-6 right-6 z-40">
+        {!isChatOpen && (
+          <button
+            onClick={() => setIsChatOpen(true)}
+            className="bg-blue-600 dark:bg-cyan-500 text-white p-4 rounded-full shadow-lg hover:scale-110 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-cyan-500 animate-scale-in"
+            aria-label="Open support chat"
+          >
+            <ChatBubbleOvalLeftEllipsisIcon />
+          </button>
+        )}
+      </div>
+      <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 }
