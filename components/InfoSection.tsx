@@ -61,7 +61,17 @@ const infoContent = [
   },
 ];
 
-const AccordionItem = ({ id, title, children, isOpen, onToggle }: { id: string, title: string, children: React.ReactNode, isOpen: boolean, onToggle: () => void }) => {
+// FIX: Refactored props to a separate interface to resolve a TypeScript error.
+interface AccordionItemProps {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+// FIX: Explicitly type AccordionItem as a React.FC to correctly handle the special `key` prop passed by React during list rendering.
+const AccordionItem: React.FC<AccordionItemProps> = ({ id, title, children, isOpen, onToggle }) => {
   return (
     <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-cyan-500/20 rounded-lg shadow-lg dark:shadow-cyan-500/5 transition-colors overflow-hidden">
       <h3 className="text-xl font-bold">

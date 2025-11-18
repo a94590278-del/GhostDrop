@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.API_KEY;
 
 const systemInstruction = `You are "Ghosty", a friendly and helpful AI support assistant for GhostDrop, a disposable temporary email service. Your goal is to answer user questions about the service based on the information provided below. Be concise, friendly, and clear in your responses. Do not make up features that are not listed.
 
@@ -36,7 +36,7 @@ export const handler = async (event) => {
     }
     
     if (!apiKey) {
-        console.error("FATAL: GEMINI_API_KEY environment variable is not set.");
+        console.error("FATAL: API_KEY environment variable is not set.");
         return { 
             statusCode: 500, 
             body: JSON.stringify({ error: 'Chatbot is not configured. The API key may be missing or invalid.' }) 

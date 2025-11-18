@@ -1,3 +1,4 @@
+
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -14,12 +15,14 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 
 // --- Gemini API Setup ---
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-  console.error("FATAL ERROR: GEMINI_API_KEY is not set in the .env file.");
-  process.exit(1);
+const apiKey = process.env.API_KEY;
+let genAI;
+
+if (apiKey) {
+  genAI = new GoogleGenAI({ apiKey });
+} else {
+  console.warn("WARNING: API_KEY is not set in the .env file. AI features will be disabled.");
 }
-const genAI = new GoogleGenAI({ apiKey });
 
 const systemInstruction = `You are "Ghosty", a friendly and helpful AI support assistant for GhostDrop, a disposable temporary email service. Your goal is to answer user questions about the service based on the information provided below. Be concise, friendly, and clear in your responses. Do not make up features that are not listed.
 
@@ -54,6 +57,10 @@ When a user asks a question, use this information to form your answer.`;
 
 // Route for email summarization
 app.post('/api/gemini/summarize', async (req, res) => {
+  if (!genAI) {
+    return res.status(500).json({ error: 'The AI service is not configured. The API key is missing.' });
+  }
+
   const { emailText } = req.body;
   if (!emailText) {
     return res.status(400).json({ error: 'emailText is required' });
@@ -84,6 +91,10 @@ Provide your summary below:`;
 
 // Route for chatbot
 app.post('/api/gemini/chat', async (req, res) => {
+    if (!genAI) {
+        return res.status(500).json({ error: 'Chatbot is not configured. The API key may be missing or invalid.' });
+    }
+
     const { message, history } = req.body;
 
     if (!message) {

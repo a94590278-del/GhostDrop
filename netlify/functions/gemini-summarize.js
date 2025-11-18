@@ -1,7 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 
 // The API key is read from the environment variables configured in the Netlify UI
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.API_KEY;
 
 export const handler = async (event) => {
     if (event.httpMethod !== 'POST') {
@@ -9,7 +9,7 @@ export const handler = async (event) => {
     }
     
     if (!apiKey) {
-        console.error("FATAL: GEMINI_API_KEY environment variable is not set.");
+        console.error("FATAL: API_KEY environment variable is not set.");
         return { 
             statusCode: 500, 
             body: JSON.stringify({ error: 'The AI service is not configured on the server.' }) 
