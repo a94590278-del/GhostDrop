@@ -5,7 +5,8 @@
   "main": "index.html",
   "type": "module",
   "scripts": {
-    "start": "echo \"This is a static app. Open index.html in a browser.\" && exit 0"
+    "start": "echo \"This is a static app. Open index.html in a browser.\" && exit 0",
+    "build": "mkdir dist && cp index.html index.tsx App.tsx types.ts metadata.json package.json dist/ && cp -r components hooks services dist/"
   },
   "author": "",
   "license": "ISC",
