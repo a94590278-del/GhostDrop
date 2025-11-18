@@ -22,7 +22,7 @@ const TypingIndicator = () => (
   </div>
 );
 
-const initialMessage: Message = { role: 'model', text: "Hi there! I'm Ghosty, the GhostDrop support assistant. How can I help you today?" };
+const initialMessage: Message = { role: 'model', text: "Hi there! I'm Ghosty (V3), the GhostDrop support assistant. This version helps debug caching issues. How can I help you today?" };
 
 export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([initialMessage]);
@@ -63,7 +63,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
       setHistory(newHistory);
     } catch (error) {
       console.error("Chatbot component error:", error);
-      const errorMessage: Message = { role: 'model', text: "Sorry, a network error occurred. Please check your connection and try again." };
+      const errorMessage: Message = { role: 'model', text: "Sorry, an error occurred. If you're seeing this, the V3 code is running. The issue is likely with your API key configuration in your deployment settings." };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
