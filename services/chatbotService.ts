@@ -64,7 +64,7 @@ export async function getChatbotResponse(message: string, history: ChatHistoryCo
         // The new history is the old history plus the latest user message and model response
         const updatedHistory = [
             ...contents,
-            { role: 'model', parts: [{ text: responseText }] }
+            { role: 'model' as const, parts: [{ text: responseText }] }
         ];
 
         return {
