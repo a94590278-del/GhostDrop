@@ -1,30 +1,35 @@
+import { GoogleGenAI } from '@google/genai';
+
 export async function summarizeEmail(emailText: string): Promise<string> {
   if (!emailText || emailText.trim().length === 0) {
     return "The email body is empty, nothing to summarize.";
   }
   
   try {
-    const response = await fetch('/api/gemini/summarize', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ emailText }),
+    const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    const model = 'gemini-2.5-flash';
+    const prompt = `You are a helpful assistant integrated into an email client. Your task is to summarize the content of an email concisely. Provide a brief summary in a few bullet points. If there are any critical pieces of information like verification codes, promotional offers, or direct calls to action, highlight them.
+
+Here is the email content:
+---
+${emailText}
+---
+
+Provide your summary below:`;
+
+    const response = await genAI.models.generateContent({
+        model: model,
+        contents: prompt,
     });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Request failed with status ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.summary;
+    
+    return response.text;
 
   } catch (error) {
-    console.error("Error summarizing email via backend:", error);
+    console.error("Error summarizing email with Gemini:", error);
     if (error instanceof Error) {
         if (error.message.includes('API key not valid')) {
-            return 'Error: The API key configured on the server is not valid.';
+            return 'Error: The API key is not valid.';
         }
         return `Error: ${error.message}`;
     }
