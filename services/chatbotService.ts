@@ -37,9 +37,9 @@ When a user asks a question, use this information to form your answer.`;
 
 export async function getChatbotResponse(message: string, history: ChatHistoryContent[]): Promise<{ responseText: string, newHistory: ChatHistoryContent[] }> {
     if (!process.env.API_KEY) {
-        console.error("API_KEY is not set in the environment.");
+        console.error("API_KEY is not set in the client environment.");
         return { 
-            responseText: "Configuration Error: The API key is missing. Please ensure it's configured in your deployment environment variables.", 
+            responseText: "[CLIENT V2] Configuration Error: API_KEY is not available on the client. Please set it in your deployment platform's environment variables.", 
             newHistory: history 
         };
     }
@@ -82,9 +82,7 @@ export async function getChatbotResponse(message: string, history: ChatHistoryCo
 
     } catch (error) {
         console.error("Error calling Gemini chat API:", error);
-        const errorMessage = (error instanceof Error && error.message.includes('API key')) 
-            ? 'Error: The AI assistant is not configured correctly. The API key may be missing or invalid.'
-            : "Sorry, I'm having trouble connecting to the support AI right now. Please try again later.";
+        const errorMessage = "[CLIENT V2] Gemini API Error: The request failed. This could be due to an invalid API key or a network issue. Please check your key and try again.";
         
         // Return the error message as a response, and the original history
         return { responseText: errorMessage, newHistory: history };

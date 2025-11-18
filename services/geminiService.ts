@@ -2,8 +2,8 @@ import { GoogleGenAI } from '@google/genai';
 
 export async function summarizeEmail(emailText: string): Promise<string> {
   if (!process.env.API_KEY) {
-    console.error("API_KEY is not set in the environment.");
-    return "Configuration Error: The API key is missing. Please ensure it's configured in your deployment environment variables.";
+    console.error("API_KEY is not set for email summarization.");
+    return "[CLIENT V2] Configuration Error: API_KEY is missing for email summarization. Please set it in your deployment platform's environment variables.";
   }
   
   if (!emailText || emailText.trim().length === 0) {
@@ -32,12 +32,6 @@ Provide your summary below:`;
 
   } catch (error) {
     console.error("Error summarizing email with Gemini:", error);
-    if (error instanceof Error) {
-        if (error.message.includes('API key not valid')) {
-            return 'Error: The API key is not valid.';
-        }
-        return `Error: ${error.message}`;
-    }
-    return "Sorry, there was a problem communicating with the AI service. Please try again later.";
+    return "[CLIENT V2] Gemini Summarization Error: The API key provided might be invalid or the service is unreachable. Please check your configuration.";
   }
 }
