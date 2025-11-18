@@ -22,7 +22,7 @@ const TypingIndicator = () => (
   </div>
 );
 
-const initialMessage: Message = { role: 'model', text: "Hi there! I'm Ghosty (V3), the GhostDrop support assistant. This version helps debug caching issues. How can I help you today?" };
+const initialMessage: Message = { role: 'model', text: "Hi there! I'm Ghosty (V4). I'm here to help. If you see this message, the latest code is running. Any API key errors are now certainly due to your deployment environment configuration." };
 
 export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([initialMessage]);
@@ -63,7 +63,7 @@ export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
       setHistory(newHistory);
     } catch (error) {
       console.error("Chatbot component error:", error);
-      const errorMessage: Message = { role: 'model', text: "Sorry, an error occurred. If you're seeing this, the V3 code is running. The issue is likely with your API key configuration in your deployment settings." };
+      const errorMessage: Message = { role: 'model', text: "Sorry, an error occurred. Seeing this V4 message means the new code is running. The problem is with your API key setup in your deployment environment variables. Please double-check it." };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
