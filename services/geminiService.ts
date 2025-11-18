@@ -1,6 +1,11 @@
 import { GoogleGenAI } from '@google/genai';
 
 export async function summarizeEmail(emailText: string): Promise<string> {
+  if (!process.env.API_KEY) {
+    console.error("API_KEY is not set in the environment.");
+    return "Configuration Error: The API key is missing. Please ensure it's configured in your deployment environment variables.";
+  }
+  
   if (!emailText || emailText.trim().length === 0) {
     return "The email body is empty, nothing to summarize.";
   }

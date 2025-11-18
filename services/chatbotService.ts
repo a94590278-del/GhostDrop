@@ -36,6 +36,14 @@ When a user asks a question, use this information to form your answer.`;
 
 
 export async function getChatbotResponse(message: string, history: ChatHistoryContent[]): Promise<{ responseText: string, newHistory: ChatHistoryContent[] }> {
+    if (!process.env.API_KEY) {
+        console.error("API_KEY is not set in the environment.");
+        return { 
+            responseText: "Configuration Error: The API key is missing. Please ensure it's configured in your deployment environment variables.", 
+            newHistory: history 
+        };
+    }
+
     if (!message || message.trim().length === 0) {
         return { responseText: "Please ask a question.", newHistory: history };
     }
