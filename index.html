@@ -182,6 +182,7 @@
           animation: fade-out 0.2s ease-in forwards;
       }
     </style>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script type="importmap">
 {
   "imports": {
@@ -213,6 +214,6 @@
         <p class="loader-subtitle">Initializing v4 Inbox...</p>
       </div>
     </div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="text/babel" data-type="module" src="/index.tsx"></script>
   </body>
 </html>
