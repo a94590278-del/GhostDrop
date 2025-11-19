@@ -12,18 +12,19 @@ import ComposeView from './components/ComposeView';
 import Spinner from './components/Spinner';
 import InfoSection from './components/InfoSection';
 import Footer from './components/Footer';
-import Chatbot from './components/Chatbot';
-import { ChatBubbleOvalLeftEllipsisIcon } from './components/Icons';
 
 const POLLING_INTERVAL = 5000; // 5 seconds
 
 function AnimatedBackground() {
   return (
-    <div className="fixed inset-0 -z-10 h-full w-full bg-white dark:bg-gray-950">
-      {/* Light mode grid */}
-      <div className="absolute bottom-0 left-0 right-0 top-0 bg-[linear-gradient(to_right,#e5e7eb_1px,transparent_1px),linear-gradient(to_bottom,#e5e7eb_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)] dark:hidden"></div>
-      {/* Dark mode grid */}
-      <div className="absolute bottom-0 left-0 right-0 top-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)] hidden dark:block"></div>
+    <div className="fixed inset-0 -z-10 h-full w-full overflow-hidden transition-colors duration-500 bg-[#f0f4f8] dark:bg-[#05050a]">
+      {/* Glowing Orbs - tuned for visibility in light mode */}
+      <div className="absolute top-[-10%] left-[-10%] w-[45vw] h-[45vw] bg-blue-400/20 dark:bg-cyan-900/10 rounded-full blur-[90px] animate-pulse-slow"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[45vw] h-[45vw] bg-purple-400/20 dark:bg-purple-900/10 rounded-full blur-[90px] animate-pulse-slow" style={{animationDelay: '1.5s'}}></div>
+      <div className="absolute top-[40%] left-[40%] w-[30vw] h-[30vw] bg-cyan-300/15 dark:opacity-0 rounded-full blur-[70px] animate-pulse-slow" style={{animationDelay: '0.8s'}}></div>
+      
+      {/* Grid Overlay - slightly darker in light mode for definition */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#64748b15_1px,transparent_1px),linear-gradient(to_bottom,#64748b15_1px,transparent_1px)] bg-[size:28px_28px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_60%,transparent_100%)]"></div>
     </div>
   );
 }
@@ -37,15 +38,20 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [readStatus, setReadStatus] = useState<Record<string, boolean>>({});
+  
+  // Settings State
   const [isSoundEnabled, setIsSoundEnabled] = useState(() => {
     return typeof window !== 'undefined' ? localStorage.getItem('soundEnabled') === 'true' : false;
   });
+  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('notificationsEnabled') === 'true' : false;
+  });
+
   const [domains, setDomains] = useState<string[]>([]);
   const [isCustomMode, setIsCustomMode] = useState<boolean>(false);
   const [isDestructing, setIsDestructing] = useState<boolean>(false);
   const [newlyArrivedMessageIds, setNewlyArrivedMessageIds] = useState<Set<string>>(new Set());
   const [composeData, setComposeData] = useState<{ to: string; subject: string; } | null>(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   
   const isInitialMount = useRef(true);
   const knownMessageIds = useRef(new Set<string>());
@@ -59,10 +65,18 @@ export default function App() {
         loader.style.opacity = '0';
         setTimeout(() => {
           loader.remove();
-        }, 300); // Match CSS transition duration
+        }, 500); // Match CSS transition duration
       }
     }
   }, [isLoading]);
+
+  const handleToggleNotifications = useCallback(() => {
+    setIsNotificationsEnabled(prev => {
+      const newValue = !prev;
+      localStorage.setItem('notificationsEnabled', String(newValue));
+      return newValue;
+    });
+  }, []);
 
   const playNotificationSound = useCallback(() => {
     if (!audioContextRef.current) {
@@ -151,10 +165,10 @@ export default function App() {
     setIsDestructing(true);
     setTimeout(() => {
       handleGenerateEmail().then(() => {
-        // Animation is 500ms, reset state after it's done.
+        // Animation is 600ms, reset state after it's done.
         setIsDestructing(false);
       });
-    }, 500);
+    }, 600);
   }, [currentEmail, isLoading, isDestructing, handleGenerateEmail]);
 
   useEffect(() => {
@@ -194,7 +208,8 @@ export default function App() {
           playNotificationSound();
         }
 
-        if (window.Notification && Notification.permission === 'granted') {
+        // Only show notification if enabled by user AND permission granted
+        if (isNotificationsEnabled && window.Notification && Notification.permission === 'granted') {
           trulyNewMessages.forEach(msg => {
             new Notification('New Email Received', {
               body: `From: ${msg.from}\nSubject: ${msg.subject}`,
@@ -212,7 +227,7 @@ export default function App() {
     } finally {
       setIsFetchingMessages(false);
     }
-  }, [currentEmail, isFetchingMessages, messages, isSoundEnabled, playNotificationSound]);
+  }, [currentEmail, isFetchingMessages, messages, isSoundEnabled, isNotificationsEnabled, playNotificationSound]);
 
   // Effect to clear the new message animation state
   useEffect(() => {
@@ -259,16 +274,6 @@ export default function App() {
     }
   };
   
-  const handleSummarizeEmail = useCallback(async (text: string): Promise<string> => {
-    try {
-      const { summarizeEmail } = await import('./services/geminiService');
-      return summarizeEmail(text);
-    } catch (error) {
-      console.error("Failed to load AI service:", error);
-      return "Error: The summarization feature failed to load. Please try again.";
-    }
-  }, []);
-
   const handleToggleReadStatus = (id: string) => {
     setReadStatus(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -278,15 +283,6 @@ export default function App() {
       isInitialMount.current = false;
     }
     handleFetchMessages();
-  };
-
-  const handleReply = () => {
-    if (selectedMessage) {
-      setComposeData({
-        to: selectedMessage.from,
-        subject: `Re: ${selectedMessage.subject}`,
-      });
-    }
   };
 
   const handleCloseCompose = () => {
@@ -307,18 +303,23 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-transparent text-gray-800 dark:text-gray-200 font-sans p-4 sm:p-6 lg:p-8 flex flex-col selection:bg-cyan-300 selection:text-cyan-900">
+    <div className="min-h-screen font-sans text-slate-900 dark:text-gray-200 flex flex-col selection:bg-indigo-200 selection:text-indigo-900 dark:selection:bg-cyan-900 dark:selection:text-cyan-200">
       <AnimatedBackground />
-      <div className="relative z-10 flex-grow flex flex-col max-w-7xl mx-auto w-full">
-        <Header isSoundEnabled={isSoundEnabled} onToggleSound={() => {
-          const newSoundState = !isSoundEnabled;
-          setIsSoundEnabled(newSoundState);
-          localStorage.setItem('soundEnabled', String(newSoundState));
-        }} />
+      <div className="relative z-10 flex-grow flex flex-col max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-8 pb-12">
+        <Header 
+          isSoundEnabled={isSoundEnabled} 
+          onToggleSound={() => {
+            const newSoundState = !isSoundEnabled;
+            setIsSoundEnabled(newSoundState);
+            localStorage.setItem('soundEnabled', String(newSoundState));
+          }} 
+          isNotificationsEnabled={isNotificationsEnabled}
+          onToggleNotifications={handleToggleNotifications}
+        />
 
         <main className="flex-grow mt-8 flex flex-col md:flex-row gap-6 lg:gap-8">
-          {/* Left Column */}
-          <div className="w-full md:w-2/5 lg:w-1/3 flex flex-col gap-6">
+          {/* Left Column (Sidebar) */}
+          <div className="w-full md:w-2/5 lg:w-1/3 flex flex-col gap-5 animate-fade-in-up">
             <EmailDisplay 
               email={currentEmail}
               domains={domains}
@@ -352,13 +353,11 @@ export default function App() {
             />
           </div>
 
-          {/* Right Column */}
-          <div className="w-full md:w-3/5 lg:w-2/3 flex-grow">
+          {/* Right Column (Message View) */}
+          <div className="w-full md:w-3/5 lg:w-2/3 flex-grow h-[650px] md:h-auto min-h-[500px] animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
             <MessageView 
               message={selectedMessage} 
               isDestructing={isDestructing}
-              onSummarizeEmail={handleSummarizeEmail}
-              onReply={handleReply}
             />
           </div>
         </main>
@@ -375,20 +374,6 @@ export default function App() {
         <InfoSection />
         <Footer />
       </div>
-
-      {/* Chatbot components */}
-      <div className="fixed bottom-6 right-6 z-40">
-        {!isChatOpen && (
-          <button
-            onClick={() => setIsChatOpen(true)}
-            className="bg-blue-600 dark:bg-cyan-500 text-white p-4 rounded-full shadow-lg hover:scale-110 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 focus:ring-cyan-500 animate-scale-in"
-            aria-label="Open support chat"
-          >
-            <ChatBubbleOvalLeftEllipsisIcon />
-          </button>
-        )}
-      </div>
-      <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 }

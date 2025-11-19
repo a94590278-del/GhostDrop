@@ -1,7 +1,10 @@
 
 import type { Message, MessageDetails } from '../types';
 
-const API_BASE_URL = 'https://api.mail.gw';
+// Switched to api.mail.tm for better stability as mail.gw was returning 500s
+const API_BASE_URL = 'https://api.mail.tm';
+const MAX_RETRIES = 5;
+const INITIAL_RETRY_DELAY = 1500;
 
 // Module-level state
 let authToken: string | null = null;
@@ -23,7 +26,9 @@ const randomString = (length: number = 10) => {
   return result;
 };
 
-// Internal fetch wrapper for API calls
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Internal fetch wrapper for API calls with Retry Logic
 async function apiRequest<T>(endpoint: string, options: RequestInit & { responseType?: 'blob' } = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
   const { responseType, ...fetchOptions } = options;
@@ -43,41 +48,85 @@ async function apiRequest<T>(endpoint: string, options: RequestInit & { response
     headers.append('Authorization', `Bearer ${authToken}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...fetchOptions,
-    headers,
-  });
+  let lastError: any;
 
-  if (!response.ok) {
-    if (response.status === 400 && endpoint === '/accounts') {
-        // Mail.gw returns 400 if the address is already used.
-        throw new Error('Address is already taken. Please try another.');
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...fetchOptions,
+        headers,
+      });
+
+      if (!response.ok) {
+        // Handle specific non-retriable client errors immediately
+        if (response.status === 400 && endpoint === '/accounts') {
+            throw new Error('Address is already taken. Please try another.');
+        }
+
+        // If it's a 4xx error (client error), usually we don't retry unless it's rate limiting (429)
+        if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+             const errorBody = await response.text();
+             console.error(`API request failed with status ${response.status}:`, errorBody);
+             throw new Error(`Request failed: ${response.statusText} (${response.status})`);
+        }
+        
+        // For 5xx errors or 429, throw to trigger retry logic
+        const errorBody = await response.text();
+        throw new Error(`Server Error: ${response.status} ${response.statusText} - ${errorBody}`);
+      }
+
+      // --- Success Handling ---
+      if (responseType === 'blob') {
+        return response.blob() as Promise<T>;
+      }
+      
+      const contentType = response.headers.get('content-type');
+      if (response.status === 204 || !contentType || !(contentType.includes('application/json') || contentType.includes('application/ld+json'))) {
+          return null as T;
+      }
+
+      const text = await response.text();
+      if (!text) {
+        return null as T; 
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch (error) {
+        console.error(`Failed to parse JSON response from ${endpoint}:`, error);
+        throw new Error('Received invalid data from the server.');
+      }
+
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if we should retry: Network errors (TypeError) or Server Errors (message contains status code or 'Server Error' or specific JSON error structure)
+      const isNetworkErr = error instanceof TypeError || error.name === 'TypeError';
+      const errorMessage = error.message || '';
+      const isServerErr = (
+          errorMessage.includes('Server Error') || 
+          errorMessage.includes('500') || 
+          errorMessage.includes('502') || 
+          errorMessage.includes('503') || 
+          errorMessage.includes('504') ||
+          errorMessage.includes('429') ||
+          errorMessage.includes('Internal Server Error')
+      );
+
+      if ((isServerErr || isNetworkErr) && attempt < MAX_RETRIES - 1) {
+         // Exponential backoff with jitter: 1500, 3000, 6000...
+         const backoff = INITIAL_RETRY_DELAY * Math.pow(2, attempt); 
+         console.warn(`Attempt ${attempt + 1} failed for ${endpoint}. Retrying in ${backoff}ms...`, errorMessage);
+         await sleep(backoff);
+         continue;
+      }
+      
+      // If not retryable or max retries reached, rethrow
+      throw error;
     }
-    const errorBody = await response.text();
-    console.error(`API request failed with status ${response.status}:`, errorBody);
-    throw new Error(`Request failed: ${response.statusText} (${response.status})`);
-  }
-
-  if (responseType === 'blob') {
-    return response.blob() as Promise<T>;
   }
   
-  const contentType = response.headers.get('content-type');
-  if (response.status === 204 || !contentType || !(contentType.includes('application/json') || contentType.includes('application/ld+json'))) {
-      return null as T;
-  }
-
-  const text = await response.text();
-  if (!text) {
-    return null as T; // Handle empty body even if headers say JSON
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    console.error(`Failed to parse JSON response from ${endpoint}:`, error);
-    throw new Error('Received invalid data from the server.');
-  }
+  throw lastError || new Error('Unknown error in apiRequest');
 }
 
 /** Fetches and caches available domains */
@@ -85,14 +134,20 @@ export async function getDomains(): Promise<string[]> {
     if (cachedDomains && cachedDomains.length > 0) {
       return cachedDomains;
     }
-    const domainsResponse = await apiRequest<{ 'hydra:member'?: { domain: string }[] }>('/domains');
-    const domains = domainsResponse?.['hydra:member']?.map(d => d.domain);
     
-    if (!domains || domains.length === 0) {
-      throw new Error('Could not fetch available domains.');
+    try {
+      const domainsResponse = await apiRequest<{ 'hydra:member'?: { domain: string }[] }>('/domains');
+      const domains = domainsResponse?.['hydra:member']?.map(d => d.domain);
+      
+      if (!domains || domains.length === 0) {
+        throw new Error('No domains returned from API.');
+      }
+      cachedDomains = domains;
+      return cachedDomains;
+    } catch (e) {
+      console.error("Failed to fetch domains:", e);
+      throw new Error('Service temporarily unavailable. Could not fetch domains.');
     }
-    cachedDomains = domains;
-    return cachedDomains;
 }
 
 /** The core logic to create a new mailbox. Can be random or specific. */
