@@ -6,7 +6,10 @@ export async function summarizeEmail(content: string): Promise<string> {
   try {
     // Initialize the client here to ensure process.env is accessed at runtime
     // This prevents crashes if the environment shim isn't ready immediately at module load
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // We check if process is defined to avoid ReferenceErrors in pure browser environments without bundlers
+    const apiKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : '';
+    
+    const ai = new GoogleGenAI({ apiKey: apiKey });
     
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -15,6 +18,7 @@ export async function summarizeEmail(content: string): Promise<string> {
     return response.text || "No summary available.";
   } catch (error) {
     console.error("Error summarizing email:", error);
-    throw new Error("Failed to generate summary. Please try again later.");
+    // Return a user-friendly error instead of throwing, so the UI can display it gracefully
+    return "Failed to generate summary. Please try again later.";
   }
 }
