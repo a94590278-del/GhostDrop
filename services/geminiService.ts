@@ -1,12 +1,13 @@
-
 import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function summarizeEmail(content: string): Promise<string> {
   if (!content) return '';
 
   try {
+    // Initialize the client here to ensure process.env is accessed at runtime
+    // This prevents crashes if the environment shim isn't ready immediately at module load
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `You are a helpful assistant. Summarize the following email content concisely. Highlight the main point and any specific action items if present.\n\nEmail Content:\n${content}`,
